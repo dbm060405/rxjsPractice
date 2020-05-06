@@ -1,24 +1,28 @@
-import {Component, OnInit, OnDestroy} from '@angular/core';
+import {ChangeDetectionStrategy, Component} from '@angular/core';
 
-import {EMPTY, Subscription} from 'rxjs';
-
-import {Product} from '../product';
+import {EMPTY, Subject} from 'rxjs';
 import {ProductService} from '../product.service';
 import {catchError} from 'rxjs/operators';
 
 @Component({
   selector: 'pm-product-list',
-  templateUrl: './product-list-alt.component.html'
+  templateUrl: './product-list-alt.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductListAltComponent {
   pageTitle = 'Products';
-  errorMessage = '';
-  selectedProductId;
+  errorMessage$: Subject<string> = new Subject<string>();
 
-  // products: Product[] = [];
-  products$ = this.productService.products$.pipe(
+  products$ = this.productService.productsWithCat$.pipe(
     catchError(err => {
-      this.errorMessage = err;
+      this.errorMessage$.next(err);
+      return EMPTY;
+    })
+  );
+
+  selectedProduct$ = this.productService.product$.pipe(
+    catchError(err => {
+      this.errorMessage$.next(err);
       return EMPTY;
     })
   );
@@ -27,6 +31,7 @@ export class ProductListAltComponent {
   }
 
   onSelected(productId: number): void {
-    console.log('Not yet implemented');
+    console.log(`here is this new Id: ${productId}`);
+    this.productService.selectedProductChanged(+productId);
   }
 }

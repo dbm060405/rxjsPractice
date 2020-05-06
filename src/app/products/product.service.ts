@@ -1,8 +1,8 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 
-import {combineLatest, EMPTY, Observable, throwError} from 'rxjs';
-import {catchError, map, tap} from 'rxjs/operators';
+import {BehaviorSubject, combineLatest, EMPTY, merge, Observable, Subject, throwError} from 'rxjs';
+import {catchError, map, scan, tap} from 'rxjs/operators';
 
 import {Product} from './product';
 import {Supplier} from '../suppliers/supplier';
@@ -15,6 +15,8 @@ import {ProductCategoryService} from '../product-categories/product-category.ser
 export class ProductService {
   private productsUrl = 'api/products';
   private suppliersUrl = this.supplierService.suppliersUrl;
+  private selectedProductId$: BehaviorSubject<number> = new BehaviorSubject(0);
+  private newProductToAdd$: Subject<Product> = new Subject();
 
   products$ = this.http.get<Array<Product>>(this.productsUrl)
     .pipe(
@@ -27,23 +29,35 @@ export class ProductService {
   ).pipe(
     map((
       [products, categories]
-    ) =>
-      products.map(product => ({
-        ...product,
-        price: product.price * 1.5,
-        searchKey: [product.productName],
-        category: categories.find(c => product.categoryId === c.id).name
-      }) as Product)
+      ) =>
+        products.map(product => ({
+          ...product,
+          price: product.price * 1.5,
+          searchKey: [product.productName],
+          category: categories.find(c => product.categoryId === c.id).name
+        }) as Product)
     )
+  );
+
+  product$ = combineLatest([
+    this.productsWithCat$, this.selectedProductId$
+  ]).pipe(
+    map(
+      ([products, selectProductId]) =>
+        products.find(product => selectProductId ? product.id === selectProductId : EMPTY)
+    ),
+    tap(product => console.log('selected product is: ', product))
+  );
+
+  productsWithAdd$ = merge(
+    this.productsWithCat$, this.newProductToAdd$
+  ).pipe(
+    scan((acc: Array<Product>, value: Product) => [...acc, value])
   );
 
   constructor(private http: HttpClient,
               private supplierService: SupplierService,
               private productCategoryService: ProductCategoryService) {
-  }
-
-  getProducts(): Observable<Product[]> {
-    return EMPTY;
   }
 
   private fakeProduct() {
@@ -57,6 +71,14 @@ export class ProductService {
       category: 'Toolbox',
       quantityInStock: 30
     };
+  }
+
+  selectedProductChanged(id: number) {
+    this.selectedProductId$.next(id);
+  }
+
+  addNewProduct(newProduct?: Product) {
+    this.newProductToAdd$.next(newProduct || this.fakeProduct());
   }
 
   private handleError(err: any) {
