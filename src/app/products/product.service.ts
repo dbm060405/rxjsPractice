@@ -1,13 +1,13 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 
-import {BehaviorSubject, combineLatest, EMPTY, merge, Observable, Subject, throwError} from 'rxjs';
-import {catchError, map, scan, tap} from 'rxjs/operators';
+import {BehaviorSubject, combineLatest, EMPTY, from, merge, Observable, Subject, throwError} from 'rxjs';
+import {catchError, filter, map, mergeMap, scan, shareReplay, switchMap, tap, toArray} from 'rxjs/operators';
 
 import {Product} from './product';
-import {Supplier} from '../suppliers/supplier';
 import {SupplierService} from '../suppliers/supplier.service';
 import {ProductCategoryService} from '../product-categories/product-category.service';
+import {Supplier} from '../suppliers/supplier';
 
 @Injectable({
   providedIn: 'root'
@@ -36,7 +36,8 @@ export class ProductService {
           searchKey: [product.productName],
           category: categories.find(c => product.categoryId === c.id).name
         }) as Product)
-    )
+    ),
+    shareReplay(1)
   );
 
   product$ = combineLatest([
@@ -46,8 +47,9 @@ export class ProductService {
       ([products, selectProductId]) =>
         products.find(product => selectProductId ? product.id === selectProductId : EMPTY)
     ),
-    tap(product => console.log('selected product is: ', product))
-  );
+    tap(product => console.log('selected product is: ', product)),
+    shareReplay(1)
+  ) as Observable<Product>;
 
   productsWithAdd$ = merge(
     this.productsWithCat$, this.newProductToAdd$
@@ -55,9 +57,32 @@ export class ProductService {
     scan((acc: Array<Product>, value: Product) => [...acc, value])
   );
 
+  // TODO: just in time approach
+  productSuppliers$ = this.product$.pipe(
+    filter(product => Boolean(product)),
+    switchMap(product =>
+      from(product.supplierIds).pipe(
+        mergeMap(supplierId => this.http.get<Supplier>(`${this.suppliersUrl}/${supplierId}`)),
+        toArray()
+      )
+    )
+  );
+
+
+  // TODO: get all approach
+  // productSuppliers$ = combineLatest(
+  //   [this.product$, this.supplierService.suppliers$]
+  // ).pipe(
+  //   map(
+  //     ([product, suppliers]) =>
+  //       suppliers.filter(supplier => product.supplierIds.includes(supplier.id))
+  //   ),
+  // );
+
   constructor(private http: HttpClient,
               private supplierService: SupplierService,
               private productCategoryService: ProductCategoryService) {
+    this.productSuppliers$.subscribe(s => console.log(s));
   }
 
   private fakeProduct() {

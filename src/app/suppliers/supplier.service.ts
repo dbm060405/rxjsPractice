@@ -1,10 +1,9 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import {Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
 
-import { throwError } from 'rxjs';
+import {of, throwError} from 'rxjs';
 import {Supplier} from './supplier';
-import {catchError, map, tap} from 'rxjs/operators';
-import {Product} from '../products/product';
+import {catchError, concatMap, map, mergeMap, shareReplay, switchMap, tap} from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -12,12 +11,49 @@ import {Product} from '../products/product';
 export class SupplierService {
   suppliersUrl = 'api/suppliers';
 
-  supplires$ = this.http.get<Array<Supplier>>(this.suppliersUrl).pipe(
+  suppliers$ = this.http.get<Array<Supplier>>(this.suppliersUrl).pipe(
     tap(data => console.log('Suppliers: ', JSON.stringify(data))),
+    shareReplay(1),
     catchError(this.handleError)
   );
 
-  constructor(private http: HttpClient) { }
+  suppliersWithMap$ = of(1, 5, 8).pipe(
+    map(
+      id => this.http.get<Supplier>(`${this.suppliersUrl}/${id}`)
+    )
+  );
+
+  suppliersWithConcatMap$ = of(1, 5, 8).pipe(
+    tap(id => console.log('concatmap source obs:', id)),
+    concatMap(id => this.http.get<Supplier>(`${this.suppliersUrl}/${id}`))
+  );
+
+  suppliersWithMergeMap$ = of(1, 5, 8).pipe(
+    tap(id => console.log('merge map source obs: ', id)),
+    mergeMap(id => this.http.get<Supplier>(`${this.suppliersUrl}/${id}`))
+  );
+
+  suppliersWithSwitchMap$ = of(1, 5, 8).pipe(
+    tap(id => console.log('switchMap source obs: ', id)),
+    switchMap(id => this.http.get<Supplier>(`${this.suppliersUrl}/${id}`))
+  );
+
+  constructor(private http: HttpClient) {
+    // this.suppliersWithMap$.subscribe(
+    //   o => o.subscribe(
+    //     item => console.log('map result: ', item)
+    //   )
+    // );
+    // this.suppliersWithConcatMap$.subscribe(
+    //   item => console.log('this is the supplier: ', item)
+    // );
+    // this.suppliersWithMergeMap$.subscribe(item =>
+    //   console.log('show me the item: ', item)
+    // );
+    // this.suppliersWithSwitchMap$.subscribe(item =>
+    //   console.log('show me the switchMap: ', item)
+    // );
+  }
 
   private handleError(err: any) {
     // in a real world app, we may send the server to some remote logging infrastructure

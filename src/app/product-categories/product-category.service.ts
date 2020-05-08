@@ -3,9 +3,8 @@ import {Injectable} from '@angular/core';
 
 import {Observable, throwError} from 'rxjs';
 
+import {catchError, shareReplay, tap} from 'rxjs/operators';
 import {ProductCategory} from './product-category';
-import {catchError, filter, map, pluck, tap} from 'rxjs/operators';
-import {Product} from '../products/product';
 
 @Injectable({
   providedIn: 'root'
@@ -16,8 +15,9 @@ export class ProductCategoryService {
   categories$ = this.http.get<Array<ProductCategory>>(this.productCategoriesUrl)
     .pipe(
       tap(data => console.log('Categories: ', JSON.stringify(data))),
+      shareReplay(1),
       catchError(this.handleError)
-  );
+    );
 
   constructor(private http: HttpClient) {
   }
