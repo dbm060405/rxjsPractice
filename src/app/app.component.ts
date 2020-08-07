@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import {Component} from '@angular/core';
+import {GoogleDriveProvider} from './shared/google-drive-provider';
 
 @Component({
   selector: 'pm-root',
@@ -7,4 +8,10 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   pageTitle = 'Acme Product Management';
+
+  constructor(private googleProvider: GoogleDriveProvider) {}
+
+  testGoogle() {
+    this.googleProvider.load().subscribe();
+  }
 }
