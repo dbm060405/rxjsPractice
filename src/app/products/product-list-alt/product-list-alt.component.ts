@@ -7,7 +7,9 @@ import {catchError} from 'rxjs/operators';
 @Component({
   selector: 'pm-product-list',
   templateUrl: './product-list-alt.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [],
+  animations: []
 })
 export class ProductListAltComponent {
   pageTitle = 'Products';
